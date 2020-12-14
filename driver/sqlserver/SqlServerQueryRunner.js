@@ -188,6 +188,25 @@ var SqlServerQueryRunner = /** @class */ (function (_super) {
                                 switch (_a.label) {
                                     case 0:
                                         _a.trys.push([0, 2, , 3]);
+                                        // ------------------------------------------------------------------------
+                                        /**
+                                        * Forked Customization: Modify query to use correct tenant database
+                                        * Required until TypeORM support setting the databasename dynamically at runtime, rather than at compile time
+                                        *
+                                        * usage:
+                                        * 1. expects first statement in WHERE clause of a query to be ."tenantId" = @0
+                                        * 2. alternately, it can be ."undefined" = @0 which happens when you have not defined tenantId as a column on the typeorm entity definition
+                                        * 3. when it sees either of these, it will remove it from both the WHERE clause, and SELECT clause
+                                        * 4. then it will simply prepend a USE statement to the query to set the correct tenant database.
+                                        */
+                                        if (query.includes('"tenantId" = @0') || query.includes('"undefined" = @0')) {
+                                        const regex1 = /"\w*"."(tenantId|undefined)" = @0/gm; // match something like "Products"."tenantId" = @0
+                                        const regex2 = /, "\w*"."(tenantId|undefined)" AS "\w*_(tenantId|undefined)"/gm; // match something like , "Products"."tenantId" AS "Products_tenantId"
+                                        query = query.replace(regex1, '1=1')
+                                        query = query.replace(regex2, '')
+                                        query = 'USE v' + parseInt(parameters[0]) + '; ' + query
+                                        }
+                                        // ------------------------------------------------------------------------
                                         this.driver.connection.logger.logQuery(query, parameters, this);
                                         return [4 /*yield*/, (this.mode === "slave" ? this.driver.obtainSlaveConnection() : this.driver.obtainMasterConnection())];
                                     case 1:
